@@ -8,6 +8,8 @@ import asyncio
 import threading
 import queue
 import sys
+import subprocess
+import time
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -192,3 +194,52 @@ def get_terminal_executable():
         return "powershell.exe"
     else:
         return "/bin/bash"
+        
+
+
+def execute_local_command(command: str, timeout: int = 60, shell: bool = True) -> dict:
+    """
+    本地执行系统命令/代码，替代原SSH/RFC远程调用
+    :param command: 要执行的命令字符串（如 "python3 -c 'print(\"hello\")'"、"ls -l"）
+    :param timeout: 命令执行超时时间（秒）
+    :param shell: 是否使用shell执行（推荐True，支持复杂命令拼接）
+    :return: 标准化返回结果（与原远程调用格式对齐，避免上游代码报错）
+    """
+    # 初始化返回结果（严格对齐原RFC/SSH返回格式）
+    result = {
+        "stdout": "",       # 命令正常输出
+        "stderr": "",       # 命令错误输出
+        "returncode": -1,   # 执行返回码（0=成功，非0=失败）
+        "success": False,   # 自定义标识：是否执行成功
+        "execution_time": 0 # 执行耗时（秒）
+    }
+
+    try:
+        start_time = time.time()
+        # 执行本地命令（subprocess核心逻辑）
+        proc = subprocess.run(
+            command,
+            shell=shell,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",  # 直接解码为字符串，避免字节流处理
+            timeout=timeout,
+            errors="ignore"    # 忽略编码错误，防止输出特殊字符导致崩溃
+        )
+
+        # 填充返回结果
+        result["stdout"] = proc.stdout
+        result["stderr"] = proc.stderr
+        result["returncode"] = proc.returncode
+        result["execution_time"] = round(time.time() - start_time, 2)
+        # 判定执行成功（返回码0即为成功）
+        result["success"] = (proc.returncode == 0)
+
+    except subprocess.TimeoutExpired:
+        result["stderr"] = f"错误：命令执行超时（超过 {timeout} 秒）"
+    except PermissionError:
+        result["stderr"] = "错误：没有执行该命令的权限"
+    except Exception as e:
+        result["stderr"] = f"错误：命令执行异常 - {str(e)}"
+
+    return result
