@@ -8,13 +8,23 @@ from python.helpers.print_style import PrintStyle
 from python.helpers.log import Log
 
 class DockerContainerManager:
+    # def __init__(self, image: str, name: str, ports: Optional[dict[str, int]] = None, volumes: Optional[dict[str, dict[str, str]]] = None,logger: Log|None=None):
+    #     self.logger = logger
+    #     self.image = image
+    #     self.name = name
+    #     self.ports = ports
+    #     self.volumes = volumes
+    #     self.init_docker()
     def __init__(self, image: str, name: str, ports: Optional[dict[str, int]] = None, volumes: Optional[dict[str, dict[str, str]]] = None,logger: Log|None=None):
-        self.logger = logger
-        self.image = image
-        self.name = name
-        self.ports = ports
-        self.volumes = volumes
-        self.init_docker()
+    self.logger = logger
+    self.image = image
+    self.name = name
+    self.ports = ports
+    self.volumes = volumes
+    # 注释/替换原init_docker逻辑，直接标记Docker已就绪（本地环境）
+    self.client = "local"
+    self.container = "local"
+    PrintStyle.standard("使用本地环境替代Docker容器，跳过Docker检测")
                 
     def init_docker(self):
         self.client = None
@@ -34,15 +44,16 @@ class DockerContainerManager:
         return self.client
                             
     def cleanup_container(self) -> None:
-        if self.container:
-            try:
-                self.container.stop()
-                self.container.remove()
-                PrintStyle.standard(f"Stopped and removed the container: {self.container.id}")
-                if self.logger: self.logger.log(type="info", content=f"Stopped and removed the container: {self.container.id}")
-            except Exception as e:
-                PrintStyle.error(f"Failed to stop and remove the container: {e}")
-                if self.logger: self.logger.log(type="error", content=f"Failed to stop and remove the container: {e}")
+        # if self.container:
+        #     try:
+        #         self.container.stop()
+        #         self.container.remove()
+        #         PrintStyle.standard(f"Stopped and removed the container: {self.container.id}")
+        #         if self.logger: self.logger.log(type="info", content=f"Stopped and removed the container: {self.container.id}")
+        #     except Exception as e:
+        #         PrintStyle.error(f"Failed to stop and remove the container: {e}")
+        #         if self.logger: self.logger.log(type="error", content=f"Failed to stop and remove the container: {e}")
+        return
 
     def get_image_containers(self):
         if not self.client: self.client = self.init_docker()
@@ -63,37 +74,39 @@ class DockerContainerManager:
         return infos
 
     def start_container(self) -> None:
-        if not self.client: self.client = self.init_docker()
-        existing_container = None
-        for container in self.client.containers.list(all=True):
-            if container.name == self.name:
-                existing_container = container
-                break
+        # if not self.client: self.client = self.init_docker()
+        # existing_container = None
+        # for container in self.client.containers.list(all=True):
+        #     if container.name == self.name:
+        #         existing_container = container
+        #         break
 
-        if existing_container:
-            if existing_container.status != 'running':
-                PrintStyle.standard(f"Starting existing container: {self.name} for safe code execution...")
-                if self.logger: self.logger.log(type="info", content=f"Starting existing container: {self.name} for safe code execution...", temp=True)
+        # if existing_container:
+        #     if existing_container.status != 'running':
+        #         PrintStyle.standard(f"Starting existing container: {self.name} for safe code execution...")
+        #         if self.logger: self.logger.log(type="info", content=f"Starting existing container: {self.name} for safe code execution...", temp=True)
                 
-                existing_container.start()
-                self.container = existing_container
-                time.sleep(2) # this helps to get SSH ready
+        #         existing_container.start()
+        #         self.container = existing_container
+        #         time.sleep(2) # this helps to get SSH ready
                 
-            else:
-                self.container = existing_container
-                # PrintStyle.standard(f"Container with name '{self.name}' is already running with ID: {existing_container.id}")
-        else:
-            PrintStyle.standard(f"Initializing docker container {self.name} for safe code execution...")
-            if self.logger: self.logger.log(type="info", content=f"Initializing docker container {self.name} for safe code execution...", temp=True)
+        #     else:
+        #         self.container = existing_container
+        #         # PrintStyle.standard(f"Container with name '{self.name}' is already running with ID: {existing_container.id}")
+        # else:
+        #     PrintStyle.standard(f"Initializing docker container {self.name} for safe code execution...")
+        #     if self.logger: self.logger.log(type="info", content=f"Initializing docker container {self.name} for safe code execution...", temp=True)
 
-            self.container = self.client.containers.run(
-                self.image,
-                detach=True,
-                ports=self.ports, # type: ignore
-                name=self.name,
-                volumes=self.volumes, # type: ignore
-            ) 
-            # atexit.register(self.cleanup_container)
-            PrintStyle.standard(f"Started container with ID: {self.container.id}")
-            if self.logger: self.logger.log(type="info", content=f"Started container with ID: {self.container.id}")
-            time.sleep(5) # this helps to get SSH ready
+        #     self.container = self.client.containers.run(
+        #         self.image,
+        #         detach=True,
+        #         ports=self.ports, # type: ignore
+        #         name=self.name,
+        #         volumes=self.volumes, # type: ignore
+        #     ) 
+        #     # atexit.register(self.cleanup_container)
+        #     PrintStyle.standard(f"Started container with ID: {self.container.id}")
+        #     if self.logger: self.logger.log(type="info", content=f"Started container with ID: {self.container.id}")
+        #     time.sleep(5) # this helps to get SSH ready
+        PrintStyle.standard("本地环境运行，无需启动Docker容器")
+        return
